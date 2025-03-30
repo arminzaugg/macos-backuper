@@ -14,14 +14,22 @@
     <string>/path/to/backup-system/scripts/backup.sh</string>
   </array>
 
-  <!-- Schedule: Run every day at 2am -->
+  <!-- Schedule: Run every day at 2am and 2pm -->
   <key>StartCalendarInterval</key>
-  <dict>
-    <key>Hour</key>
-    <integer>2</integer>
-    <key>Minute</key>
-    <integer>0</integer>
-  </dict>
+  <array>
+    <dict>
+      <key>Hour</key>
+      <integer>2</integer>
+      <key>Minute</key>
+      <integer>0</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>14</integer>
+      <key>Minute</key>
+      <integer>0</integer>
+    </dict>
+  </array>
 
   <!-- WatchPaths: Monitor changes to the config files -->
   <key>WatchPaths</key>
@@ -38,5 +46,17 @@
   <!-- Automatically run the job when loaded -->
   <key>RunAtLoad</key>
   <true/>
+
+  <!-- Run when system wakes from sleep -->
+  <key>StartOnMount</key>
+  <true/>
+
+  <!-- Prevent too frequent runs if system wakes up multiple times -->
+  <key>ThrottleInterval</key>
+  <integer>3600</integer>
+
+  <!-- Ensure job runs even if system was asleep at scheduled time -->
+  <key>StartInterval</key>
+  <integer>86400</integer>
 </dict>
 </plist>
