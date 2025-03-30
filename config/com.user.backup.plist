@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Label for the job -->
+  <key>Label</key>
+  <string>com.user.backup</string>
+
+  <!-- Program to run -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/path/to/backup-system/scripts/backup.sh</string>
+  </array>
+
+  <!-- Schedule: Run every day at 2am -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>2</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- WatchPaths: Monitor changes to the config files -->
+  <key>WatchPaths</key>
+  <array>
+    <string>/path/to/backup-system/config/restic.env</string>
+  </array>
+
+  <!-- Log paths for standard output and error -->
+  <key>StandardOutPath</key>
+  <string>/Users/youruser/Library/Logs/backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/youruser/Library/Logs/backup.err</string>
+
+  <!-- Automatically run the job when loaded -->
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
