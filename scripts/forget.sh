@@ -12,9 +12,9 @@ exec >> "$LOG_FILE" 2>&1
 echo "[INFO] Prune started at $(date)"
 
 # === Load Secrets ===
-export RESTIC_PASSWORD="$(security find-generic-password -s "restic-password" -w)"
-export AWS_ACCESS_KEY_ID="$(security find-generic-password -s "aws-access-key-id" -w)"
-export AWS_SECRET_ACCESS_KEY="$(security find-generic-password -s "aws-secret-access-key" -w)"
+export RESTIC_PASSWORD="$(security find-generic-password -s "client-backup-luza-restic-password" -w)"
+export AWS_ACCESS_KEY_ID="$(security find-generic-password -s "client-backup-luza-aws-access-key-id" -w)"
+export AWS_SECRET_ACCESS_KEY="$(security find-generic-password -s "client-backup-luza-aws-secret-access-key" -w)"
 
 # === Load env ===
 if [[ -f "$ENV_FILE" ]]; then

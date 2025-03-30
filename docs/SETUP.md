@@ -34,17 +34,17 @@ Store all sensitive credentials using the macOS Keychain.
 
 ```bash
 # Restic repository password
-security add-generic-password -s restic-password -w 'your-secure-password'
+security add-generic-password -s client-backup-luza-restic-password -w 'your-secure-password'
 
 # AWS credentials
-security add-generic-password -s aws-access-key-id -w 'YOUR_AWS_KEY_ID'
-security add-generic-password -s aws-secret-access-key -w 'YOUR_AWS_SECRET'
+security add-generic-password -s client-backup-luza-aws-access-key-id -w 'YOUR_AWS_KEY_ID'
+security add-generic-password -s client-backup-luza-aws-secret-access-key -w 'YOUR_AWS_SECRET'
 ```
 
 ### Verify a key:
 
 ```bash
-security find-generic-password -s restic-password -w
+security find-generic-password -s client-backup-luza-restic-password -w
 ```
 
 ---

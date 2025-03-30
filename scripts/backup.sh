@@ -17,7 +17,7 @@ check_requirements() {
   ping -q -c 1 s3.amazonaws.com >/dev/null || { echo "[ERROR] No network"; exit 1; }
   mount | grep -q "/Users" || { echo "[ERROR] User volume not mounted"; exit 1; }
 
-  for key in "restic-password" "aws-access-key-id" "aws-secret-access-key"; do
+  for key in "client-backup-luza-restic-password" "client-backup-luza-aws-access-key-id" "client-backup-luza-aws-secret-access-key"; do
     security find-generic-password -s "$key" -w >/dev/null 2>&1 || {
       echo "[ERROR] Missing Keychain item: $key"
       exit 1
@@ -26,9 +26,9 @@ check_requirements() {
 }
 
 # === Load Secrets ===
-export RESTIC_PASSWORD="$(security find-generic-password -s "restic-password" -w)"
-export AWS_ACCESS_KEY_ID="$(security find-generic-password -s "aws-access-key-id" -w)"
-export AWS_SECRET_ACCESS_KEY="$(security find-generic-password -s "aws-secret-access-key" -w)"
+export RESTIC_PASSWORD="$(security find-generic-password -s "client-backup-luza-restic-password" -w)"
+export AWS_ACCESS_KEY_ID="$(security find-generic-password -s "client-backup-luza-aws-access-key-id" -w)"
+export AWS_SECRET_ACCESS_KEY="$(security find-generic-password -s "client-backup-luza-aws-secret-access-key" -w)"
 
 # === Load env ===
 if [[ -f "$ENV_FILE" ]]; then
