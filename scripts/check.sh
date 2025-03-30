@@ -4,7 +4,7 @@ set -euo pipefail
 
 # === Config ===
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="$BASE_DIR/config/restic.env"
+ENV_FILE="$BASE_DIR/config/restic.env.local"
 LOG_FILE="$HOME/Library/Logs/backup-check.log"
 
 # === Logging ===
