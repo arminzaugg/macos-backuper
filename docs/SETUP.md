@@ -11,10 +11,17 @@ This guide walks you through setting up a fully automated macOS backup system us
 
 ## 📦 1. Install Dependencies
 
-Install the required tools using [Homebrew](https://brew.sh/):
+Install restic using [Homebrew](https://brew.sh/):
 
 ```bash
-brew install restic awscli
+brew install restic
+```
+
+Install awscli v2.22.35 or below when using Hetzner object storage [Hetzner Docs](https://docs.hetzner.com/storage/object-storage/getting-started/using-s3-api-tools)
+
+```bash
+curl "https://awscli.amazonaws.com/AWSCLIV2-2.22.35.pkg" -o "AWSCLIV2.pkg"
+sudo installer -pkg AWSCLIV2.pkg -target
 ```
 
 ---
