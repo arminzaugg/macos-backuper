@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatusTabView: View {
     @Environment(AppState.self) private var appState
+    @State private var backupStartTime: Date?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,6 +18,13 @@ struct StatusTabView: View {
             Spacer(minLength: 0)
 
             actionBar
+        }
+        .onChange(of: appState.currentStatus) { _, newValue in
+            if case .running = newValue {
+                backupStartTime = Date()
+            } else {
+                backupStartTime = nil
+            }
         }
     }
 
@@ -75,9 +83,30 @@ struct StatusTabView: View {
                 Text(operation)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.blue)
+
+                if let startTime = backupStartTime {
+                    TimelineView(.periodic(from: startTime, by: 1)) { context in
+                        let elapsed = context.date.timeIntervalSince(startTime)
+                        let minutes = Int(elapsed) / 60
+                        let seconds = Int(elapsed) % 60
+                        Text("Running for \(minutes):\(String(format: "%02d", seconds))")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 ProgressView()
                     .controlSize(.small)
                     .scaleEffect(0.8)
+
+                Button {
+                    Task { await appState.backupManager.cancelRunningOperation() }
+                } label: {
+                    Text("Cancel")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
             }
 
         case .success(let date):

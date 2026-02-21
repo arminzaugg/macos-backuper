@@ -41,7 +41,7 @@ final class BackupManager {
         return false
     }
 
-    private let scriptRunner = ScriptRunner()
+    let scriptRunner = ScriptRunner()
     let configManager: ConfigManager
 
     init(configManager: ConfigManager) {
@@ -50,6 +50,49 @@ final class BackupManager {
 
     func cancelRunningOperation() async {
         await scriptRunner.cancel()
+        status = .error(message: userFriendlyMessage(for: .cancelled))
+    }
+
+    func userFriendlyMessage(for error: BackupError) -> String {
+        switch error {
+        case .scriptNotFound:
+            return "Backup script not found. Make sure the app is configured correctly in Settings."
+        case .configurationError(let msg):
+            return "Configuration error: \(msg). Check Settings to fix."
+        case .timeout:
+            return "The operation timed out after 30 minutes. Check your network connection."
+        case .resticError(code: 1, _):
+            return "Connection failed. Check your internet and repository URL."
+        case .resticError(code: 3, _):
+            return "Repository not initialized. Run setup from Settings."
+        case .resticError(let code, _):
+            return "Backup failed (error \(code)). Check logs for details."
+        case .cancelled:
+            return "Operation was cancelled."
+        case .networkError(let detail):
+            return "Network error: \(detail). Check your internet connection."
+        }
+    }
+
+    func initializeRepository() async -> (success: Bool, message: String) {
+        do {
+            let env = try configManager.buildEnvironment()
+            let result = try await scriptRunner.runRestic(
+                arguments: ["init"],
+                environment: env
+            )
+            if result.exitCode == 0 {
+                return (true, "Repository initialized successfully.")
+            } else {
+                // Exit code 1 with "already initialized" is not an error
+                if result.output.contains("already initialized") {
+                    return (true, "Repository already initialized.")
+                }
+                return (false, "Init failed (exit \(result.exitCode)): \(String(result.output.suffix(200)))")
+            }
+        } catch {
+            return (false, error.localizedDescription)
+        }
     }
 
     func runBackup() async {
@@ -65,7 +108,7 @@ final class BackupManager {
             guard FileManager.default.fileExists(atPath: scriptPath) else {
                 let error = BackupError.scriptNotFound(path: scriptPath)
                 lastError = error
-                status = .error(message: error.localizedDescription)
+                status = .error(message: userFriendlyMessage(for: error))
                 return
             }
 
@@ -79,7 +122,7 @@ final class BackupManager {
             } else {
                 let error = BackupError.resticError(code: result.exitCode, output: result.output)
                 lastError = error
-                status = .error(message: error.localizedDescription)
+                status = .error(message: userFriendlyMessage(for: error))
             }
         } catch let error as ScriptRunner.ScriptRunnerError {
             backupDuration = Date().timeIntervalSince(startTime)
@@ -91,11 +134,12 @@ final class BackupManager {
                 backupError = .configurationError(detail: error.localizedDescription)
             }
             lastError = backupError
-            status = .error(message: backupError.localizedDescription)
+            status = .error(message: userFriendlyMessage(for: backupError))
         } catch {
             backupDuration = Date().timeIntervalSince(startTime)
-            lastError = .configurationError(detail: error.localizedDescription)
-            status = .error(message: error.localizedDescription)
+            let backupError = BackupError.configurationError(detail: error.localizedDescription)
+            lastError = backupError
+            status = .error(message: userFriendlyMessage(for: backupError))
         }
     }
 
@@ -111,7 +155,7 @@ final class BackupManager {
             guard FileManager.default.fileExists(atPath: scriptPath) else {
                 let error = BackupError.scriptNotFound(path: scriptPath)
                 lastError = error
-                status = .error(message: error.localizedDescription)
+                status = .error(message: userFriendlyMessage(for: error))
                 return
             }
 
@@ -122,7 +166,7 @@ final class BackupManager {
             } else {
                 let error = BackupError.resticError(code: result.exitCode, output: result.output)
                 lastError = error
-                status = .error(message: error.localizedDescription)
+                status = .error(message: userFriendlyMessage(for: error))
             }
         } catch let error as ScriptRunner.ScriptRunnerError {
             let backupError: BackupError
@@ -133,10 +177,11 @@ final class BackupManager {
                 backupError = .configurationError(detail: error.localizedDescription)
             }
             lastError = backupError
-            status = .error(message: backupError.localizedDescription)
+            status = .error(message: userFriendlyMessage(for: backupError))
         } catch {
-            lastError = .configurationError(detail: error.localizedDescription)
-            status = .error(message: error.localizedDescription)
+            let backupError = BackupError.configurationError(detail: error.localizedDescription)
+            lastError = backupError
+            status = .error(message: userFriendlyMessage(for: backupError))
         }
     }
 
@@ -151,15 +196,18 @@ final class BackupManager {
             guard result.exitCode == 0 else {
                 let error = BackupError.resticError(code: result.exitCode, output: result.output)
                 lastError = error
-                status = .error(message: "Failed to load snapshots")
+                status = .error(message: userFriendlyMessage(for: error))
                 return
             }
 
             guard let data = result.output.data(using: .utf8) else { return }
-            snapshots = try Snapshot.dateDecoder.decode([Snapshot].self, from: data)
+            var decoded = try Snapshot.dateDecoder.decode([Snapshot].self, from: data)
+            decoded.sort { $0.time > $1.time }
+            snapshots = decoded
         } catch {
-            lastError = .configurationError(detail: error.localizedDescription)
-            status = .error(message: error.localizedDescription)
+            let backupError = BackupError.configurationError(detail: error.localizedDescription)
+            lastError = backupError
+            status = .error(message: userFriendlyMessage(for: backupError))
         }
     }
 
@@ -181,11 +229,12 @@ final class BackupManager {
             } else {
                 let error = BackupError.resticError(code: result.exitCode, output: result.output)
                 lastError = error
-                status = .error(message: "Failed to remove snapshot")
+                status = .error(message: userFriendlyMessage(for: error))
             }
         } catch {
-            lastError = .configurationError(detail: error.localizedDescription)
-            status = .error(message: error.localizedDescription)
+            let backupError = BackupError.configurationError(detail: error.localizedDescription)
+            lastError = backupError
+            status = .error(message: userFriendlyMessage(for: backupError))
         }
     }
 
@@ -213,11 +262,12 @@ final class BackupManager {
             } else {
                 let error = BackupError.resticError(code: result.exitCode, output: result.output)
                 lastError = error
-                status = .error(message: "Prune failed with exit code \(result.exitCode)")
+                status = .error(message: userFriendlyMessage(for: error))
             }
         } catch {
-            lastError = .configurationError(detail: error.localizedDescription)
-            status = .error(message: error.localizedDescription)
+            let backupError = BackupError.configurationError(detail: error.localizedDescription)
+            lastError = backupError
+            status = .error(message: userFriendlyMessage(for: backupError))
         }
     }
 }

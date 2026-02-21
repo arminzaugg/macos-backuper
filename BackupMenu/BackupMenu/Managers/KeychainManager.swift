@@ -52,6 +52,36 @@ struct KeychainManager {
         }
     }
 
+    static func writePassword(service: String, password: String) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = ["add-generic-password", "-s", service, "-a", "", "-w", password, "-U"]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw KeychainError.unexpectedError(status: process.terminationStatus)
+        }
+    }
+
+    static func deletePassword(service: String) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = ["delete-generic-password", "-s", service]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw KeychainError.itemNotFound(service: service)
+        }
+    }
+
     static func loadBackupSecrets() throws -> [String: String] {
         return [
             "RESTIC_PASSWORD": try readPassword(service: Constants.keychainService(Constants.keychainResticPassword)),

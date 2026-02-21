@@ -22,5 +22,7 @@
 	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>ProjectRoot</key>
+	<string>$(SRCROOT)/..</string>
 </dict>
 </plist>

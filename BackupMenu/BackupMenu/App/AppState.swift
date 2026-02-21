@@ -10,6 +10,7 @@ final class AppState {
 
     var errorMessage: String?
     var selectedTab: Int = 0
+    var setupCompleted: Bool = false
 
     var showError: Bool {
         errorMessage != nil
@@ -21,6 +22,45 @@ final class AppState {
 
     var menuBarIcon: String {
         currentStatus.sfSymbolName
+    }
+
+    var needsSetup: Bool {
+        if setupCompleted { return false }
+
+        // Check if config file exists and is loadable
+        let configExists = (try? configManager.loadConfig()) != nil
+
+        // Check if all keychain keys are present
+        let keychainOK = KeychainManager.checkKeyExists(
+            service: Constants.keychainService(Constants.keychainResticPassword)
+        ) && KeychainManager.checkKeyExists(
+            service: Constants.keychainService(Constants.keychainAWSAccessKey)
+        ) && KeychainManager.checkKeyExists(
+            service: Constants.keychainService(Constants.keychainAWSSecretKey)
+        )
+
+        return !configExists || !keychainOK
+    }
+
+    var isResticInstalled: Bool {
+        let candidates = [
+            "/opt/homebrew/bin/restic",
+            "/usr/local/bin/restic",
+        ]
+        for path in candidates {
+            if FileManager.default.fileExists(atPath: path) {
+                return true
+            }
+        }
+        return false
+    }
+
+    func completeSetup() {
+        setupCompleted = true
+    }
+
+    func initializeRepository() async -> (success: Bool, message: String) {
+        await backupManager.initializeRepository()
     }
 
     func clearError() {
@@ -110,29 +150,43 @@ final class AppState {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    /// Walk up from the app bundle location looking for config/restic.env.local
     private static func findConfigPath() -> String {
         let fm = FileManager.default
-        var dir = (Bundle.main.bundlePath as NSString).deletingLastPathComponent
+        let configRel = "config/restic.env.local"
 
-        // Walk up at most 5 levels to find the project root containing config/
-        for _ in 0..<5 {
-            let candidate = (dir as NSString).appendingPathComponent("config/restic.env.local")
-            if fm.fileExists(atPath: candidate) {
-                return candidate
-            }
-            dir = (dir as NSString).deletingLastPathComponent
-        }
-
-        // Fallback: check if there's a stored path in UserDefaults
+        // 1. Check UserDefaults for a previously stored path
         if let stored = UserDefaults.standard.string(forKey: "configPath"),
            fm.fileExists(atPath: stored) {
             return stored
         }
 
-        // Last resort: assume project is in the same directory as the app
+        // 2. Use ProjectRoot embedded in Info.plist at build time (SRCROOT/..)
+        if let projectRoot = Bundle.main.infoDictionary?["ProjectRoot"] as? String {
+            let candidate = (projectRoot as NSString).appendingPathComponent(configRel)
+            if fm.fileExists(atPath: candidate) {
+                UserDefaults.standard.set(candidate, forKey: "configPath")
+                return candidate
+            }
+        }
+
+        // 3. Walk up from the app bundle (works when app is inside the project)
+        var dir = (Bundle.main.bundlePath as NSString).deletingLastPathComponent
+        for _ in 0..<5 {
+            let candidate = (dir as NSString).appendingPathComponent(configRel)
+            if fm.fileExists(atPath: candidate) {
+                UserDefaults.standard.set(candidate, forKey: "configPath")
+                return candidate
+            }
+            dir = (dir as NSString).deletingLastPathComponent
+        }
+
+        // 4. Last resort: return the ProjectRoot-based path even if file doesn't exist yet
+        if let projectRoot = Bundle.main.infoDictionary?["ProjectRoot"] as? String {
+            return (projectRoot as NSString).appendingPathComponent(configRel)
+        }
+
         return (Bundle.main.bundlePath as NSString)
             .deletingLastPathComponent
-            .appending("/config/restic.env.local")
+            .appending("/\(configRel)")
     }
 }

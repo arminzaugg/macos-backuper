@@ -7,10 +7,12 @@ struct SettingsTabView: View {
     @State private var includePaths: [String] = []
     @State private var excludePaths: [String] = []
     @State private var scheduleTimes: [ScheduleTime] = ScheduleConfig.defaults.times
-    @State private var retention = RetentionPolicy.defaults
+    @State private var retention = RetentionPolicy.loadFromUserDefaults()
     @State private var launchAtLogin = false
     @State private var loaded = false
     @State private var showSaveConfirmation = false
+    @State private var saveError: String?
+    @State private var loadError: String?
 
     var body: some View {
         ScrollView {
@@ -163,6 +165,9 @@ struct SettingsTabView: View {
                             }
                             .labelsHidden()
                             .frame(width: 56)
+                            .onChange(of: scheduleTimes[index].hour) { _, _ in
+                                appState.scheduleManager.updateSchedule(ScheduleConfig(times: scheduleTimes))
+                            }
 
                             Text(":")
                                 .font(.system(size: 12, weight: .medium))
@@ -175,11 +180,15 @@ struct SettingsTabView: View {
                             }
                             .labelsHidden()
                             .frame(width: 56)
+                            .onChange(of: scheduleTimes[index].minute) { _, _ in
+                                appState.scheduleManager.updateSchedule(ScheduleConfig(times: scheduleTimes))
+                            }
 
                             Spacer()
 
                             Button {
                                 scheduleTimes.remove(at: index)
+                                appState.scheduleManager.updateSchedule(ScheduleConfig(times: scheduleTimes))
                             } label: {
                                 Image(systemName: "minus.circle.fill")
                                     .font(.system(size: 14))
@@ -290,7 +299,18 @@ struct SettingsTabView: View {
         VStack(spacing: 0) {
             Divider()
             HStack {
-                if showSaveConfirmation {
+                if let error = saveError {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.red)
+                        Text(error)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.red)
+                            .lineLimit(1)
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else if showSaveConfirmation {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 12))
@@ -300,20 +320,23 @@ struct SettingsTabView: View {
                             .foregroundStyle(.green)
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else if let error = loadError {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.orange)
+                        Text(error)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.orange)
+                            .lineLimit(1)
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
 
                 Spacer()
 
                 Button {
                     saveConfig()
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showSaveConfirmation = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            showSaveConfirmation = false
-                        }
-                    }
                 } label: {
                     Text("Save Changes")
                         .font(.system(size: 12, weight: .semibold))
@@ -340,13 +363,15 @@ struct SettingsTabView: View {
             includePaths = config.includePaths
             excludePaths = config.excludePaths
         } catch {
-            // Use empty defaults on first load failure
+            loadError = "Could not load config. Using defaults."
         }
 
+        retention = RetentionPolicy.loadFromUserDefaults()
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
     private func saveConfig() {
+        saveError = nil
         let config = BackupConfig(
             repository: repository,
             includePaths: includePaths.filter { !$0.isEmpty },
@@ -355,11 +380,30 @@ struct SettingsTabView: View {
         do {
             try appState.configManager.saveConfig(config)
         } catch {
-            // Save failed silently for now
+            withAnimation(.easeInOut(duration: 0.2)) {
+                saveError = "Failed to save configuration."
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    saveError = nil
+                }
+            }
+            return
         }
+
+        retention.saveToUserDefaults()
 
         let scheduleConfig = ScheduleConfig(times: scheduleTimes)
         appState.scheduleManager.updateSchedule(scheduleConfig)
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showSaveConfirmation = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showSaveConfirmation = false
+            }
+        }
     }
 }
 

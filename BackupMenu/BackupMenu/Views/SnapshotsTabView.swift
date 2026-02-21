@@ -4,6 +4,7 @@ struct SnapshotsTabView: View {
     @Environment(AppState.self) private var appState
     @State private var snapshotToForget: Snapshot?
     @State private var showRetentionConfirm = false
+    @State private var retention = RetentionPolicy.loadFromUserDefaults()
 
     private var backupManager: BackupManager {
         appState.backupManager
@@ -22,6 +23,7 @@ struct SnapshotsTabView: View {
             bottomBar
         }
         .onAppear {
+            retention = RetentionPolicy.loadFromUserDefaults()
             Task { await backupManager.loadSnapshots() }
         }
     }
@@ -210,7 +212,7 @@ struct SnapshotsTabView: View {
             VStack(spacing: 4) {
                 Text("Apply Retention Policy?")
                     .font(.system(size: 15, weight: .semibold))
-                Text("Keep 7 daily, 4 weekly, 6 monthly snapshots. Older snapshots and unused data will be removed.")
+                Text("Keep \(retention.keepDaily) daily, \(retention.keepWeekly) weekly, \(retention.keepMonthly) monthly snapshots. Older snapshots and unused data will be removed.")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -228,10 +230,11 @@ struct SnapshotsTabView: View {
                 .keyboardShortcut(.cancelAction)
 
                 Button("Apply") {
+                    let policy = retention
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showRetentionConfirm = false
                     }
-                    Task { await backupManager.forgetWithPolicy(policy: .defaults) }
+                    Task { await backupManager.forgetWithPolicy(policy: policy) }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)

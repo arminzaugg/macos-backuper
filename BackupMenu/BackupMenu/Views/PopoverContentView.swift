@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct PopoverContentView: View {
     @Environment(AppState.self) private var appState
@@ -20,9 +21,16 @@ struct PopoverContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            tabBar
-            Divider()
-            tabContent
+            if appState.needsSetup {
+                SetupView()
+            } else {
+                tabBar
+                Divider()
+                tabContent
+
+                Divider()
+                quitButton
+            }
         }
         .frame(width: 400, height: 500)
         .background(.background)
@@ -77,5 +85,25 @@ struct PopoverContentView: View {
             SettingsTabView()
                 .transition(.opacity)
         }
+    }
+
+    // MARK: - Quit Button
+
+    private var quitButton: some View {
+        Button {
+            NSApplication.shared.terminate(nil)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "power")
+                    .font(.system(size: 10, weight: .medium))
+                Text("Quit BackupMenu")
+                    .font(.system(size: 12))
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
