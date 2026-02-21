@@ -19,11 +19,11 @@ final class ScheduleManager {
 
     private var timer: Timer?
     private var lastAutoBackupDate: Date?
-    private static let userDefaultsKey = "backupSchedule"
-    private static let minimumInterval: TimeInterval = 60 * 60 // 60 minutes
+    private var firedSlots: Set<String> = []
+    private var firedSlotsDate: Date?
 
     init() {
-        if let data = UserDefaults.standard.data(forKey: Self.userDefaultsKey),
+        if let data = UserDefaults.standard.data(forKey: Constants.userDefaultsScheduleKey),
            let saved = try? JSONDecoder().decode(ScheduleConfig.self, from: data) {
             self.schedule = saved
         } else {
@@ -49,7 +49,7 @@ final class ScheduleManager {
 
     func saveSchedule() {
         if let data = try? JSONEncoder().encode(schedule) {
-            UserDefaults.standard.set(data, forKey: Self.userDefaultsKey)
+            UserDefaults.standard.set(data, forKey: Constants.userDefaultsScheduleKey)
         }
         calculateNextFireDate()
     }
@@ -60,10 +60,8 @@ final class ScheduleManager {
         var nearest: Date?
 
         for time in schedule.times {
-            // Try today
             if var candidate = calendar.date(bySettingHour: time.hour, minute: time.minute, second: 0, of: now) {
                 if candidate <= now {
-                    // Already passed today, try tomorrow
                     candidate = calendar.date(byAdding: .day, value: 1, to: candidate) ?? candidate
                 }
                 if nearest == nil || candidate < nearest! {
@@ -79,7 +77,7 @@ final class ScheduleManager {
 
     private func startTimer() {
         stopTimer()
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: Constants.scheduleCheckInterval, repeats: true) { [weak self] _ in
             self?.checkSchedule()
         }
     }
@@ -94,17 +92,34 @@ final class ScheduleManager {
 
         // Enforce minimum interval between auto backups
         if let last = lastAutoBackupDate,
-           Date().timeIntervalSince(last) < Self.minimumInterval {
+           Date().timeIntervalSince(last) < Constants.minimumBackupInterval {
             return
         }
 
         let calendar = Calendar.current
         let now = Date()
-        let currentHour = calendar.component(.hour, from: now)
-        let currentMinute = calendar.component(.minute, from: now)
+
+        // Reset fired slots at the start of each new day
+        if let slotsDate = firedSlotsDate, !calendar.isDate(slotsDate, inSameDayAs: now) {
+            firedSlots.removeAll()
+            firedSlotsDate = now
+        } else if firedSlotsDate == nil {
+            firedSlotsDate = now
+        }
 
         for time in schedule.times {
-            if time.hour == currentHour && time.minute == currentMinute {
+            let slotKey = String(format: "%02d:%02d", time.hour, time.minute)
+
+            // Skip if already fired for this slot today
+            guard !firedSlots.contains(slotKey) else { continue }
+
+            // Check if current time is at or past the scheduled time
+            guard let scheduledDate = calendar.date(bySettingHour: time.hour, minute: time.minute, second: 0, of: now) else {
+                continue
+            }
+
+            if now >= scheduledDate {
+                firedSlots.insert(slotKey)
                 lastAutoBackupDate = now
                 onScheduleFired?()
                 calculateNextFireDate()

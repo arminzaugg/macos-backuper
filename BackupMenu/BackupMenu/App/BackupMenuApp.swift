@@ -9,7 +9,18 @@ struct BackupMenuApp: App {
             PopoverContentView()
                 .environment(appState)
         } label: {
-            Image(systemName: appState.menuBarIcon)
+            switch appState.currentStatus {
+            case .idle:
+                Image(systemName: "externaldrive.fill")
+            case .running:
+                Image(systemName: "arrow.triangle.2.circlepath")
+            case .success:
+                Image(systemName: "checkmark.circle.fill")
+                    .symbolRenderingMode(.multicolor)
+            case .error:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .symbolRenderingMode(.multicolor)
+            }
         }
         .menuBarExtraStyle(.window)
     }

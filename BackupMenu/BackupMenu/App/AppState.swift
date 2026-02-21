@@ -8,12 +8,27 @@ final class AppState {
     let scheduleManager: ScheduleManager
     let configManager: ConfigManager
 
+    var errorMessage: String?
+    var selectedTab: Int = 0
+
+    var showError: Bool {
+        errorMessage != nil
+    }
+
     var currentStatus: BackupStatus {
         backupManager.status
     }
 
     var menuBarIcon: String {
         currentStatus.sfSymbolName
+    }
+
+    func clearError() {
+        errorMessage = nil
+    }
+
+    func openSettings() {
+        selectedTab = 2
     }
 
     init() {
@@ -27,15 +42,53 @@ final class AppState {
         self.backupManager = backupManager
         self.scheduleManager = scheduleManager
 
-        scheduleManager.onScheduleFired = { [weak backupManager] in
-            guard let backupManager else { return }
+        scheduleManager.onScheduleFired = { [weak self, weak backupManager] in
+            guard let self, let backupManager else { return }
             Task {
                 await backupManager.runBackup()
+                let status = backupManager.status
+                switch status {
+                case .success(let date):
+                    let formatter = DateFormatter()
+                    formatter.dateStyle = .short
+                    formatter.timeStyle = .short
+                    await self.sendNotification(
+                        title: "Backup Completed",
+                        body: "Backup finished successfully at \(formatter.string(from: date))",
+                        isError: false
+                    )
+                case .error(let message):
+                    await MainActor.run {
+                        self.errorMessage = message
+                    }
+                    await self.sendNotification(
+                        title: "Backup Failed",
+                        body: message,
+                        isError: true
+                    )
+                default:
+                    break
+                }
             }
         }
 
         loadInitialStatus()
         requestNotificationPermission()
+    }
+
+    func sendNotification(title: String, body: String, isError: Bool) async {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = isError ? .defaultCritical : .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+
+        try? await UNUserNotificationCenter.current().add(request)
     }
 
     private func loadInitialStatus() {

@@ -93,6 +93,29 @@ final class ConfigManager {
         return env
     }
 
+    func validateConfig(_ config: BackupConfig) -> [String] {
+        var warnings: [String] = []
+        let fm = FileManager.default
+
+        if config.repository.isEmpty {
+            warnings.append("Repository URL is empty")
+        } else if !config.repository.contains("://") && !config.repository.hasPrefix("/") {
+            warnings.append("Repository URL looks invalid: missing protocol or absolute path")
+        }
+
+        if config.includePaths.isEmpty {
+            warnings.append("No include paths specified — nothing will be backed up")
+        }
+
+        for path in config.includePaths {
+            if !fm.fileExists(atPath: path) {
+                warnings.append("Include path does not exist: \(path)")
+            }
+        }
+
+        return warnings
+    }
+
     // MARK: - Parsing
 
     private func parseRepository(from content: String) -> String? {

@@ -4,120 +4,202 @@ struct StatusTabView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
+        VStack(spacing: 0) {
+            statusCard
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
 
-            statusIcon
-            statusMessage
+            detailRows
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
 
-            Divider()
+            Spacer(minLength: 0)
 
-            infoSection
-
-            Divider()
-
-            actionButtons
-
-            Spacer()
+            actionBar
         }
-        .padding()
     }
 
-    // MARK: - Status Display
+    // MARK: - Status Card
+
+    private var statusCard: some View {
+        VStack(spacing: 10) {
+            statusIndicator
+            statusLabel
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(cardBackground)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(.quaternary, lineWidth: 0.5)
+                }
+        }
+    }
 
     @ViewBuilder
-    private var statusIcon: some View {
+    private var statusIndicator: some View {
         let status = appState.currentStatus
-        Image(systemName: status.sfSymbolName)
-            .font(.system(size: 48))
-            .foregroundStyle(iconColor(for: status))
-            .symbolEffect(.pulse, isActive: isRunning)
+
+        ZStack {
+            // Outer glow ring
+            Circle()
+                .fill(statusColor(for: status).opacity(0.1))
+                .frame(width: 64, height: 64)
+
+            // Inner circle
+            Circle()
+                .fill(statusColor(for: status).opacity(0.15))
+                .frame(width: 48, height: 48)
+
+            // Icon
+            Image(systemName: status.sfSymbolName)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(statusColor(for: status))
+                .symbolEffect(.pulse, isActive: isRunning)
+        }
     }
 
     @ViewBuilder
-    private var statusMessage: some View {
+    private var statusLabel: some View {
         switch appState.currentStatus {
         case .idle:
-            Text("Idle")
-                .font(.headline)
+            Text("Ready")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.secondary)
+
         case .running(let operation):
-            Text(operation)
-                .font(.headline)
-                .foregroundStyle(.blue)
+            VStack(spacing: 4) {
+                Text(operation)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.blue)
+                ProgressView()
+                    .controlSize(.small)
+                    .scaleEffect(0.8)
+            }
+
         case .success(let date):
-            Text("Backup Successful")
-                .font(.headline)
-                .foregroundStyle(.green)
-            Text(date, style: .relative)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            VStack(spacing: 2) {
+                Text("Backup Successful")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.green)
+                Text(date, style: .relative)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    + Text(" ago")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
         case .error(let message):
-            Text("Error")
-                .font(.headline)
-                .foregroundStyle(.red)
-            Text(message)
-                .font(.caption)
+            VStack(spacing: 2) {
+                Text("Error")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.red)
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.horizontal, 8)
+            }
+        }
+    }
+
+    // MARK: - Detail Rows
+
+    private var detailRows: some View {
+        VStack(spacing: 1) {
+            detailRow(
+                icon: "calendar.badge.clock",
+                label: "Last Backup",
+                value: lastBackupText
+            )
+
+            detailRow(
+                icon: "clock.arrow.2.circlepath",
+                label: "Next Scheduled",
+                value: nextScheduledText
+            )
+
+            detailRow(
+                icon: "externaldrive.connected.to.line.below",
+                label: "Repository",
+                value: repositoryText
+            )
+        }
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(.quaternary.opacity(0.5))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func detailRow(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
+                .frame(width: 16, alignment: .center)
+
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
     }
 
-    // MARK: - Info
+    // MARK: - Action Bar
 
-    private var infoSection: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("Last Backup")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if let date = appState.backupManager.lastBackupDate {
-                    Text(date, format: .dateTime.month(.abbreviated).day().hour().minute())
-                } else {
-                    Text("Never")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            HStack {
-                Text("Next Scheduled")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if appState.scheduleManager.isEnabled, let next = appState.scheduleManager.nextFireDate {
-                    Text(next, format: .dateTime.month(.abbreviated).day().hour().minute())
-                } else {
-                    Text("Not scheduled")
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .font(.callout)
-    }
-
-    // MARK: - Actions
-
-    private var actionButtons: some View {
-        HStack(spacing: 12) {
-            Button {
-                Task { await appState.backupManager.runBackup() }
-            } label: {
-                Label("Backup Now", systemImage: "arrow.triangle.2.circlepath")
+    private var actionBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 10) {
+                Button {
+                    Task { await appState.backupManager.runBackup() }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Backup Now")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
                     .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(isRunning)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+                .disabled(isRunning)
 
-            Button {
-                Task { await appState.backupManager.runCheck() }
-            } label: {
-                Label("Check", systemImage: "checkmark.shield")
+                Button {
+                    Task { await appState.backupManager.runCheck() }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "checkmark.shield")
+                            .font(.system(size: 11, weight: .medium))
+                        Text("Verify")
+                            .font(.system(size: 12, weight: .medium))
+                    }
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .disabled(isRunning)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .disabled(isRunning)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
     }
 
@@ -127,12 +209,51 @@ struct StatusTabView: View {
         appState.backupManager.isRunning
     }
 
-    private func iconColor(for status: BackupStatus) -> Color {
+    private var cardBackground: Color {
+        switch appState.currentStatus {
+        case .idle: .clear
+        case .running: .blue.opacity(0.03)
+        case .success: .green.opacity(0.03)
+        case .error: .red.opacity(0.03)
+        }
+    }
+
+    private func statusColor(for status: BackupStatus) -> Color {
         switch status {
         case .idle: .secondary
         case .running: .blue
         case .success: .green
         case .error: .red
         }
+    }
+
+    private var lastBackupText: String {
+        if let date = appState.backupManager.lastBackupDate {
+            return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        }
+        return "Never"
+    }
+
+    private var nextScheduledText: String {
+        if appState.scheduleManager.isEnabled, let next = appState.scheduleManager.nextFireDate {
+            return next.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        }
+        return "Not scheduled"
+    }
+
+    private var repositoryText: String {
+        if let config = try? appState.configManager.loadConfig() {
+            let repo = config.repository
+            // Show just the bucket/path portion for brevity
+            if let range = repo.range(of: "//") {
+                let afterScheme = repo[range.upperBound...]
+                if let slashIndex = afterScheme.firstIndex(of: "/") {
+                    return String(afterScheme[slashIndex...])
+                }
+                return String(afterScheme)
+            }
+            return repo
+        }
+        return "Not configured"
     }
 }

@@ -54,9 +54,9 @@ struct KeychainManager {
 
     static func loadBackupSecrets() throws -> [String: String] {
         return [
-            "RESTIC_PASSWORD": try readPassword(service: "client-backup-luza-restic-password"),
-            "AWS_ACCESS_KEY_ID": try readPassword(service: "client-backup-luza-aws-access-key-id"),
-            "AWS_SECRET_ACCESS_KEY": try readPassword(service: "client-backup-luza-aws-secret-access-key"),
+            "RESTIC_PASSWORD": try readPassword(service: Constants.keychainService(Constants.keychainResticPassword)),
+            "AWS_ACCESS_KEY_ID": try readPassword(service: Constants.keychainService(Constants.keychainAWSAccessKey)),
+            "AWS_SECRET_ACCESS_KEY": try readPassword(service: Constants.keychainService(Constants.keychainAWSSecretKey)),
         ]
     }
 }
