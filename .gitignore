@@ -1,0 +1,13 @@
+# Local config (contains user-specific paths and endpoints)
+config/restic.env.local
+
+# macOS
+.DS_Store
+
+# Xcode
+BackupMenu/BackupMenu.xcodeproj/xcuserdata/
+BackupMenu/BackupMenu.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+
+# Claude Code
+CLAUDE.md

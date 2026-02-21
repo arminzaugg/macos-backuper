@@ -11,11 +11,20 @@ LOG_FILE="$HOME/Library/Logs/backup.log"
 exec >> "$LOG_FILE" 2>&1
 echo "[INFO] Backup started at $(date)"
 
+# Check if the environment file exists
+if [[ -f "$ENV_FILE" ]]; then
+  set -a               # Start automatically exporting variables
+  source "$ENV_FILE"   # Source the environment file
+  set +a               # Stop automatically exporting variables
+else
+  echo "[ERROR] Environment file not found at $ENV_FILE"
+  exit 1
+fi
+
 # === Pre-flight Checks ===
 check_requirements() {
   command -v restic >/dev/null || { echo "[ERROR] restic not installed"; exit 1; }
   ping -q -c 1 s3.amazonaws.com >/dev/null || { echo "[ERROR] No network"; exit 1; }
-  mount | grep -q "/Users" || { echo "[ERROR] User volume not mounted"; exit 1; }
 
   for key in "client-backup-luza-restic-password" "client-backup-luza-aws-access-key-id" "client-backup-luza-aws-secret-access-key"; do
     security find-generic-password -s "$key" -w >/dev/null 2>&1 || {
@@ -29,15 +38,6 @@ check_requirements() {
 export RESTIC_PASSWORD="$(security find-generic-password -s "client-backup-luza-restic-password" -w)"
 export AWS_ACCESS_KEY_ID="$(security find-generic-password -s "client-backup-luza-aws-access-key-id" -w)"
 export AWS_SECRET_ACCESS_KEY="$(security find-generic-password -s "client-backup-luza-aws-secret-access-key" -w)"
-
-# === Load env ===
-if [[ -f "$ENV_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-else
-  echo "[ERROR] Missing environment file at $ENV_FILE"
-  exit 1
-fi
 
 # === Backup Execution ===
 check_requirements
