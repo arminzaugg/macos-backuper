@@ -11,6 +11,7 @@ final class AppState {
     var errorMessage: String?
     var selectedTab: Int = 0
     var setupCompleted: Bool = false
+    var forceShowSetup: Bool = false
 
     var showError: Bool {
         errorMessage != nil
@@ -25,6 +26,7 @@ final class AppState {
     }
 
     var needsSetup: Bool {
+        if forceShowSetup { return true }
         if setupCompleted { return false }
 
         // Check if config file exists and is loadable
@@ -57,6 +59,7 @@ final class AppState {
 
     func completeSetup() {
         setupCompleted = true
+        forceShowSetup = false
     }
 
     func initializeRepository() async -> (success: Bool, message: String) {

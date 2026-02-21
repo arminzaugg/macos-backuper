@@ -6,16 +6,18 @@ struct StatusTabView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            statusCard
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
+            ScrollView {
+                VStack(spacing: 0) {
+                    statusCard
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 12)
 
-            detailRows
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
-
-            Spacer(minLength: 0)
+                    detailRows
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                }
+            }
 
             actionBar
         }

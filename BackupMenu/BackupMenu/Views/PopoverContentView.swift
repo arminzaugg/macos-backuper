@@ -32,7 +32,8 @@ struct PopoverContentView: View {
                 quitButton
             }
         }
-        .frame(width: 400, height: 500)
+        .frame(width: 400)
+        .frame(minHeight: 420, idealHeight: 500, maxHeight: 600)
         .background(.background)
     }
 
@@ -90,20 +91,38 @@ struct PopoverContentView: View {
     // MARK: - Quit Button
 
     private var quitButton: some View {
-        Button {
-            NSApplication.shared.terminate(nil)
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "power")
-                    .font(.system(size: 10, weight: .medium))
-                Text("Quit BackupMenu")
-                    .font(.system(size: 12))
+        HStack {
+            Button {
+                appState.forceShowSetup = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Setup")
+                        .font(.system(size: 11))
+                }
+                .foregroundStyle(.tertiary)
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "power")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Quit BackupMenu")
+                        .font(.system(size: 11))
+                }
+                .foregroundStyle(.secondary)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 }
