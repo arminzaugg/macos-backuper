@@ -57,7 +57,7 @@ if [[ -n "${BACKUP_DOTFILES_DIR:-}" && -d "$BACKUP_DOTFILES_DIR" ]]; then
   echo "[INFO] Found ${#INCLUDE_ARGS[@]} dotfile entries"
 fi
 
-for path in "${BACKUP_INCLUDE[@]}"; do
+for path in "${BACKUP_INCLUDE[@]+"${BACKUP_INCLUDE[@]}"}"; do
   INCLUDE_ARGS+=("$path")
 done
 
