@@ -27,14 +27,13 @@ struct PopoverContentView: View {
                 tabBar
                 Divider()
                 tabContent
-
+                    .frame(maxHeight: .infinity)
+                    .clipped()
                 Divider()
                 quitButton
             }
         }
-        .frame(width: 400)
-        .frame(minHeight: 420, idealHeight: 500, maxHeight: 600)
-        .background(.background)
+        .frame(width: 400, height: 500)
     }
 
     // MARK: - Tab Bar
@@ -43,9 +42,7 @@ struct PopoverContentView: View {
         HStack(spacing: 2) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedTab = tab
-                    }
+                    selectedTab = tab
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: tab.icon)
@@ -78,13 +75,10 @@ struct PopoverContentView: View {
         switch selectedTab {
         case .status:
             StatusTabView()
-                .transition(.opacity)
         case .snapshots:
             SnapshotsTabView()
-                .transition(.opacity)
         case .settings:
             SettingsTabView()
-                .transition(.opacity)
         }
     }
 

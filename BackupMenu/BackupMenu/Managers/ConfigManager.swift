@@ -67,17 +67,17 @@ final class ConfigManager {
             }
         }
 
-        lines.append("export RESTIC_REPOSITORY=\"\(config.repository)\"")
+        lines.append("export RESTIC_REPOSITORY=\"\(bashEscape(config.repository))\"")
         lines.append("")
         lines.append("BACKUP_INCLUDE=(")
         for path in config.includePaths {
-            lines.append("  \"\(path)\"")
+            lines.append("  \"\(bashEscape(path))\"")
         }
         lines.append(")")
         lines.append("")
         lines.append("BACKUP_EXCLUDE=(")
         for path in config.excludePaths {
-            lines.append("  \"\(path)\"")
+            lines.append("  \"\(bashEscape(path))\"")
         }
         lines.append(")")
         lines.append("")
@@ -114,6 +114,18 @@ final class ConfigManager {
         }
 
         return warnings
+    }
+
+    // MARK: - Escaping
+
+    /// Escape special characters for use inside double-quoted bash strings.
+    private func bashEscape(_ value: String) -> String {
+        var result = value
+        result = result.replacingOccurrences(of: "\\", with: "\\\\")
+        result = result.replacingOccurrences(of: "\"", with: "\\\"")
+        result = result.replacingOccurrences(of: "$", with: "\\$")
+        result = result.replacingOccurrences(of: "`", with: "\\`")
+        return result
     }
 
     // MARK: - Parsing

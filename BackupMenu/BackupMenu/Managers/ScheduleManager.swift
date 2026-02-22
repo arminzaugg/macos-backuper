@@ -78,7 +78,9 @@ final class ScheduleManager {
     private func startTimer() {
         stopTimer()
         timer = Timer.scheduledTimer(withTimeInterval: Constants.scheduleCheckInterval, repeats: true) { [weak self] _ in
-            self?.checkSchedule()
+            DispatchQueue.main.async {
+                self?.checkSchedule()
+            }
         }
     }
 

@@ -24,7 +24,7 @@ fi
 # === Pre-flight Checks ===
 check_requirements() {
   command -v restic >/dev/null || { echo "[ERROR] restic not installed"; exit 1; }
-  ping -q -c 1 s3.amazonaws.com >/dev/null || { echo "[ERROR] No network"; exit 1; }
+  ping -q -c 1 nbg1.your-objectstorage.com >/dev/null || { echo "[ERROR] No network"; exit 1; }
 
   for key in "client-backup-luza-restic-password" "client-backup-luza-aws-access-key-id" "client-backup-luza-aws-secret-access-key"; do
     security find-generic-password -s "$key" -w >/dev/null 2>&1 || {

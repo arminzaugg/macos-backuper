@@ -18,6 +18,7 @@ struct SetupView: View {
 
     // Step 4 - Backup Paths
     @State private var includePaths: [String] = []
+    @State private var newExcludePattern = ""
     @State private var excludePaths: [String] = [
         "Library",
         ".Trash",
@@ -354,14 +355,7 @@ struct SetupView: View {
                     }
 
                     HStack(spacing: 6) {
-                        TextField("pattern or path", text: Binding(
-                            get: { "" },
-                            set: { newValue in
-                                if !newValue.isEmpty {
-                                    excludePaths.append(newValue)
-                                }
-                            }
-                        ))
+                        TextField("pattern or path", text: $newExcludePattern)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12, design: .monospaced))
                         .padding(6)
@@ -370,7 +364,11 @@ struct SetupView: View {
                                 .fill(.quaternary.opacity(0.5))
                         }
                         .onSubmit {
-                            // Handled by the binding set
+                            let trimmed = newExcludePattern.trimmingCharacters(in: .whitespaces)
+                            if !trimmed.isEmpty {
+                                excludePaths.append(trimmed)
+                                newExcludePattern = ""
+                            }
                         }
                     }
                 }

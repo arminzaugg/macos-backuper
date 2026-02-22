@@ -3,6 +3,7 @@ import SwiftUI
 struct StatusTabView: View {
     @Environment(AppState.self) private var appState
     @State private var backupStartTime: Date?
+    @State private var cachedRepositoryText: String = "Not configured"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +28,9 @@ struct StatusTabView: View {
             } else {
                 backupStartTime = nil
             }
+        }
+        .onAppear {
+            cachedRepositoryText = loadRepositoryText()
         }
     }
 
@@ -273,6 +277,10 @@ struct StatusTabView: View {
     }
 
     private var repositoryText: String {
+        cachedRepositoryText
+    }
+
+    private func loadRepositoryText() -> String {
         if let config = try? appState.configManager.loadConfig() {
             let repo = config.repository
             // Show just the bucket/path portion for brevity

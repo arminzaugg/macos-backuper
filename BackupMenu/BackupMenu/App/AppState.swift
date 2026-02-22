@@ -12,6 +12,7 @@ final class AppState {
     var selectedTab: Int = 0
     var setupCompleted: Bool = false
     var forceShowSetup: Bool = false
+    private var _cachedNeedsSetup: Bool = true
 
     var showError: Bool {
         errorMessage != nil
@@ -28,7 +29,10 @@ final class AppState {
     var needsSetup: Bool {
         if forceShowSetup { return true }
         if setupCompleted { return false }
+        return _cachedNeedsSetup
+    }
 
+    func refreshSetupStatus() {
         // Check if config file exists and is loadable
         let configExists = (try? configManager.loadConfig()) != nil
 
@@ -41,7 +45,7 @@ final class AppState {
             service: Constants.keychainService(Constants.keychainAWSSecretKey)
         )
 
-        return !configExists || !keychainOK
+        _cachedNeedsSetup = !configExists || !keychainOK
     }
 
     var isResticInstalled: Bool {
@@ -60,6 +64,7 @@ final class AppState {
     func completeSetup() {
         setupCompleted = true
         forceShowSetup = false
+        refreshSetupStatus()
     }
 
     func initializeRepository() async -> (success: Bool, message: String) {
@@ -117,6 +122,7 @@ final class AppState {
 
         loadInitialStatus()
         requestNotificationPermission()
+        refreshSetupStatus()
     }
 
     func sendNotification(title: String, body: String, isError: Bool) async {
