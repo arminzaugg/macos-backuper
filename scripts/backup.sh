@@ -45,9 +45,26 @@ check_requirements
 echo "[INFO] Starting restic backup..."
 
 INCLUDE_ARGS=()
+
+# Auto-discover dotfiles from BACKUP_DOTFILES_DIR
+if [[ -n "${BACKUP_DOTFILES_DIR:-}" && -d "$BACKUP_DOTFILES_DIR" ]]; then
+  echo "[INFO] Discovering dotfiles in $BACKUP_DOTFILES_DIR"
+  for entry in "$BACKUP_DOTFILES_DIR"/.*; do
+    base="$(basename "$entry")"
+    [[ "$base" == "." || "$base" == ".." ]] && continue
+    INCLUDE_ARGS+=("$entry")
+  done
+  echo "[INFO] Found ${#INCLUDE_ARGS[@]} dotfile entries"
+fi
+
 for path in "${BACKUP_INCLUDE[@]}"; do
   INCLUDE_ARGS+=("$path")
 done
+
+if [[ ${#INCLUDE_ARGS[@]} -eq 0 ]]; then
+  echo "[ERROR] No paths to back up (BACKUP_INCLUDE is empty and no dotfiles found)"
+  exit 1
+fi
 
 EXCLUDE_ARGS=()
 for path in "${BACKUP_EXCLUDE[@]}"; do

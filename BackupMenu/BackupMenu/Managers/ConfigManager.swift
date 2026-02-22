@@ -40,6 +40,7 @@ final class ConfigManager {
         let repository = parseRepository(from: content)
         let includePaths = parseBashArray(named: "BACKUP_INCLUDE", from: content)
         let excludePaths = parseBashArray(named: "BACKUP_EXCLUDE", from: content)
+        let dotfilesDir = parseVariable(named: "BACKUP_DOTFILES_DIR", from: content)
 
         guard let repository else {
             throw ConfigError.parseError(detail: "RESTIC_REPOSITORY not found")
@@ -48,7 +49,8 @@ final class ConfigManager {
         return BackupConfig(
             repository: repository,
             includePaths: includePaths,
-            excludePaths: excludePaths
+            excludePaths: excludePaths,
+            dotfilesDir: dotfilesDir
         )
     }
 
@@ -69,6 +71,12 @@ final class ConfigManager {
 
         lines.append("export RESTIC_REPOSITORY=\"\(bashEscape(config.repository))\"")
         lines.append("")
+
+        if let dotfilesDir = config.dotfilesDir, !dotfilesDir.isEmpty {
+            lines.append("BACKUP_DOTFILES_DIR=\"\(bashEscape(dotfilesDir))\"")
+            lines.append("")
+        }
+
         lines.append("BACKUP_INCLUDE=(")
         for path in config.includePaths {
             lines.append("  \"\(bashEscape(path))\"")
@@ -103,8 +111,13 @@ final class ConfigManager {
             warnings.append("Repository URL looks invalid: missing protocol or absolute path")
         }
 
-        if config.includePaths.isEmpty {
+        let hasDotfilesDir = config.dotfilesDir != nil && !config.dotfilesDir!.isEmpty
+        if config.includePaths.isEmpty && !hasDotfilesDir {
             warnings.append("No include paths specified — nothing will be backed up")
+        }
+
+        if let dir = config.dotfilesDir, !dir.isEmpty, !fm.fileExists(atPath: dir) {
+            warnings.append("Dotfiles directory does not exist: \(dir)")
         }
 
         for path in config.includePaths {
@@ -129,6 +142,19 @@ final class ConfigManager {
     }
 
     // MARK: - Parsing
+
+    private func parseVariable(named name: String, from content: String) -> String? {
+        for line in content.components(separatedBy: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("\(name)=") || trimmed.hasPrefix("export \(name)=") {
+                if let start = trimmed.firstIndex(of: "\""),
+                   let end = trimmed[trimmed.index(after: start)...].firstIndex(of: "\"") {
+                    return String(trimmed[trimmed.index(after: start)..<end])
+                }
+            }
+        }
+        return nil
+    }
 
     private func parseRepository(from content: String) -> String? {
         for line in content.components(separatedBy: "\n") {

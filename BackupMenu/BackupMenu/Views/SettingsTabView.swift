@@ -4,6 +4,7 @@ import ServiceManagement
 struct SettingsTabView: View {
     @Environment(AppState.self) private var appState
     @State private var repository = ""
+    @State private var dotfilesDir = ""
     @State private var includePaths: [String] = []
     @State private var excludePaths: [String] = []
     @State private var scheduleTimes: [ScheduleTime] = ScheduleConfig.defaults.times
@@ -52,9 +53,32 @@ struct SettingsTabView: View {
     private var pathsSection: some View {
         SettingsSection(title: "Paths", icon: "folder") {
             VStack(alignment: .leading, spacing: 10) {
+                // Dotfiles
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("DOTFILES DIRECTORY")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .tracking(0.5)
+
+                    TextField("e.g. /Users/aza", text: $dotfilesDir)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .monospaced))
+                        .padding(6)
+                        .background {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(.quaternary.opacity(0.5))
+                        }
+
+                    Text("All dotfiles in this directory are auto-discovered at backup time")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
+
+                Divider()
+
                 // Include
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("INCLUDE")
+                    Text("ADDITIONAL INCLUDE")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.secondary)
                         .tracking(0.5)
@@ -360,6 +384,7 @@ struct SettingsTabView: View {
         do {
             let config = try appState.configManager.loadConfig()
             repository = config.repository
+            dotfilesDir = config.dotfilesDir ?? ""
             includePaths = config.includePaths
             excludePaths = config.excludePaths
         } catch {
@@ -375,7 +400,8 @@ struct SettingsTabView: View {
         let config = BackupConfig(
             repository: repository,
             includePaths: includePaths.filter { !$0.isEmpty },
-            excludePaths: excludePaths.filter { !$0.isEmpty }
+            excludePaths: excludePaths.filter { !$0.isEmpty },
+            dotfilesDir: dotfilesDir.isEmpty ? nil : dotfilesDir
         )
         do {
             try appState.configManager.saveConfig(config)
