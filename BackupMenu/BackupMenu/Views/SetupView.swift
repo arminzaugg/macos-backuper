@@ -516,6 +516,17 @@ struct SetupView: View {
 
             Spacer()
 
+            if appState.forceShowSetup {
+                Button {
+                    appState.forceShowSetup = false
+                } label: {
+                    Text("Skip")
+                        .font(.system(size: 13))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+
             if currentStep < totalSteps - 1 {
                 Button {
                     if currentStep == 3 {
